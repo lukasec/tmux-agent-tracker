@@ -4,11 +4,6 @@ Keep a live, crash-proof map of every **Claude Code / Codex** agent running in y
 tmux sessions — so when the tmux server dies (and it does), **one command rebuilds
 every session and resumes every agent** exactly where it left off.
 
-> Born from a real problem: long-running tmux servers crash (e.g. the macOS copy-mode
-> `grid_free_line` double-free), taking down a dozen named sessions with 20+ resumable
-> agents. The transcripts survive on disk — but *which agent was in which named window*
-> is gone, and rebuilding it by hand is a nightmare. This tool persists that map.
-
 ---
 
 ## What it records
@@ -47,6 +42,57 @@ Two safety properties:
   while tmux is down can't wipe your recovery script.
 - **tmux-only** — state is built purely from `tmux list-panes`, so an agent you run in
   a plain terminal (no tmux) never ends up in the db.
+
+## tmux keybindings & where the hooks fire
+
+`install.sh` installs **only** the snapshot triggers — it does **not** add any spawn or
+navigation keybindings; those are yours to define. It doesn't need to touch them either:
+the hooks fire on the tmux **event**, so it makes no difference whether you trigger that
+event with a keybinding, the mouse, or a `tmux` command on the CLI.
+
+What the tool installs:
+- the 7 global `set-hook`s listed below, each running a snapshot in the background;
+- a wrap on the **rename-session** key (`M-s` by default) — tmux fires no rename hook, so
+  the key itself snapshots after renaming. Rebind it in `tmux-agents.tmux` if you use a
+  different key for rename.
+
+If you launch agents via keybindings, here's how a typical set lines up with the hooks
+(`M` = Option/Alt). These bindings are **optional examples** — adapt freely:
+
+| key | does | event → snapshot |
+|---|---|---|
+| `M-c` / `M-x` | new claude / codex pane (`split-window`) | `after-split-window` ✓ |
+| `M-T` | new window (`new-window`) | `after-new-window` ✓ |
+| `M-w` | kill pane (`kill-pane`) | `after-kill-pane` ✓ |
+| `M-m` | new session | `session-created` ✓ |
+| `M-q` | kill session | `session-closed` ✓ |
+| `M-s` | rename session | wrapped by the tool ✓ |
+| `M-o` / `M-Tab` | switch session / window | `client-session-changed` ✓ (on session switch) |
+| `M-hjkl` | move between panes | — (nothing changed to track) |
+| *type `claude` / `codex` in a pane* | launch an agent by hand | caught by the **zsh `preexec`** hook, not tmux |
+
+That last row is the point of the `preexec` hook: typing a launch fires no tmux event at
+all, so without it a hand-started agent wouldn't be recorded until your next tmux action.
+
+<details><summary>Optional starter keybindings — paste into <code>~/.tmux.conf</code></summary>
+
+```tmux
+# M = Option/Alt. Agents launched here are picked up by the after-split/new-window hooks.
+bind -n M-c split-window -h -c "#{pane_current_path}" 'claude' \; select-layout tiled
+bind -n M-x split-window -h -c "#{pane_current_path}" 'codex'  \; select-layout tiled
+bind -n M-t split-window -h -c "#{pane_current_path}" \; select-layout tiled
+bind -n M-T new-window   -c "#{pane_current_path}"
+bind -n M-w kill-pane
+bind -n M-m command-prompt -p "new session:" { new-session -d -s "%%" }
+bind -n M-q confirm-before -p "kill session? (y/n)" kill-session
+bind -n M-h select-pane -L
+bind -n M-l select-pane -R
+bind -n M-k select-pane -U
+bind -n M-j select-pane -D
+bind -n M-o choose-tree -s
+# (M-s "rename session" is added by install.sh)
+```
+</details>
 
 ## Install (macOS)
 

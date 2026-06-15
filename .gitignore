@@ -1,0 +1,6 @@
+# Runtime files generated in ~/.tmux-agents when installed there.
+# state.json + restore.sh ARE committed on purpose (that's the recovery history).
+.backfill.lock
+snapshot.log
+__pycache__/
+*.pyc

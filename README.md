@@ -96,11 +96,6 @@ bind -n M-o choose-tree -s
 
 ## Install (macOS)
 
-> **Prefer your coding agent to do it?** Hand it **[`AGENT-SETUP.md`](AGENT-SETUP.md)** — a
-> ready-to-paste prompt that discovers your setup (launchers, multi-account Codex), installs,
-> and verifies, while respecting the gotchas (e.g. Codex ids only appear after the first
-> message). Manual steps follow.
-
 Requires: macOS, `tmux`, `python3`, `zsh`, and a `claude` and/or `codex` on your PATH.
 
 ```bash
@@ -116,21 +111,33 @@ Homebrew's tmux), wires the tmux hooks + a rename-key wrap, and adds the zsh pre
 
 ## Adapting it
 
-The **only** thing that's personal is *how you launch the agents*. Defaults assume the
-plain `claude` / `codex` binaries, producing `claude --resume <id>` and
-`codex resume <id>`. If you use shell wrappers/aliases, edit two functions in
-`snapshot.py` (both have your-version examples in comments):
+The **only** thing that's personal is *how you launch the agents* — and **if you use
+aliases or multiple Codex accounts you must set this up, or recovery will resume the
+wrong thing.** Defaults assume the plain `claude` / `codex` binaries, producing
+`claude --resume <id>` and `codex resume <id>`. Edit two functions in `snapshot.py`
+(both ship with commented examples):
 
 ```python
-def claude_launcher(cwd):     # return your Claude launcher, e.g. "cc"
-    return "claude"
+def claude_launcher(cwd):     # return your Claude launcher
+    return "claude"           # e.g. "cc"
 
-def codex_alias(home):        # return your Codex launcher, e.g. "cx"
-    return "codex"            # (the original author maps CODEX_HOME -> cx/cxbu accounts)
+def codex_alias(home):        # return your Codex launcher
+    return "codex"            # e.g. "cx"
 ```
 
-Whatever you return must be a valid command in an interactive shell, because
-`restore.sh` types it into the pane. That's it — everything else is generic.
+**Aliases / shell wrappers** — whatever you return is *typed into the pane* by
+`restore.sh`, so it must be a real command in your interactive shell. If you start agents
+via a wrapper that sets flags or env (model, project dir, permissions, account), return
+that wrapper — otherwise restore launches a bare binary without your setup. Add the same
+launcher names to the `case` list in `preexec.zsh` too, so *typed* launches are caught.
+
+**Multiple Codex accounts** — if you run more than one Codex login via `CODEX_HOME`
+(e.g. `~/.codex-work`, `~/.codex-personal`), you **must** map each home to its launcher in
+`codex_alias(home)` (the `home` argument is that account's `CODEX_HOME`), or a resumed
+session reconnects to the *wrong account*. The commented example shows the
+`~/.codex-<name>` → `cx<name>` pattern.
+
+Everything else is generic.
 
 ## Recovering after a crash
 

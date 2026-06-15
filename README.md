@@ -96,6 +96,11 @@ bind -n M-o choose-tree -s
 
 ## Install (macOS)
 
+> **Prefer your coding agent to do it?** Hand it **[`AGENT-SETUP.md`](AGENT-SETUP.md)** — a
+> ready-to-paste prompt that discovers your setup (launchers, multi-account Codex), installs,
+> and verifies, while respecting the gotchas (e.g. Codex ids only appear after the first
+> message). Manual steps follow.
+
 Requires: macOS, `tmux`, `python3`, `zsh`, and a `claude` and/or `codex` on your PATH.
 
 ```bash
